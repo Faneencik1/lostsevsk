@@ -4,13 +4,7 @@ import asyncio
 from datetime import datetime
 from collections import defaultdict
 from telegram import Update, InputFile, InputMediaPhoto, InputMediaVideo
-from telegram.ext import (
-    Application,
-    ContextTypes,
-    MessageHandler,
-    CommandHandler,
-    filters
-)
+from telegram.ext import Updater, ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
 
 # Настройка логгера (остается без изменений)
 logger = logging.getLogger(__name__)
@@ -188,18 +182,27 @@ async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при отправке логов: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("log", send_log))
-    app.add_handler(MessageHandler(filters.ALL, forward))
+    # Используем Updater для версии 20.0
+    updater = Updater(BOT_TOKEN)
+    dispatcher = updater.dispatcher
     
-    app.add_error_handler(lambda update, context: logger.error(
+    dispatcher.add_handler(CommandHandler("log", send_log))
+    dispatcher.add_handler(MessageHandler(filters.ALL, forward))
+    
+    # Обработчик ошибок
+    dispatcher.add_error_handler(lambda update, context: logger.error(
         f"Необработанное исключение: {context.error}", 
         exc_info=True
     ))
     
     logger.info("Бот запущен ✅ с Webhook")
-    app.run_webhook(
+    updater.start_webhook(
         listen="0.0.0.0",
         port=8080,
+        url_path=BOT_TOKEN,
         webhook_url=WEBHOOK_URL,
+        cert=None,
+        bootstrap_retries=0,
+        drop_pending_updates=False
     )
+    updater.idle()
