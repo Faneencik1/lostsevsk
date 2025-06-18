@@ -1,3 +1,9 @@
+import sys
+if sys.version_info >= (3, 13):
+    import collections.abc
+    import typing
+    typing.Callable = collections.abc.Callable
+
 import os
 import logging
 import asyncio
@@ -184,14 +190,11 @@ async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при отправке логов: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    # Создаем Application с указанием токена
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     
-    # Добавляем обработчики
     application.add_handler(CommandHandler("log", send_log))
     application.add_handler(MessageHandler(filters.ALL, forward))
     
-    # Обработчик ошибок
     application.add_error_handler(lambda update, context: logger.error(
         f"Необработанное исключение: {context.error}", 
         exc_info=True
@@ -199,13 +202,8 @@ if __name__ == "__main__":
     
     logger.info("Бот запущен ✅ с Webhook")
     
-    # Запускаем приложение в режиме webhook
     application.run_webhook(
         listen="0.0.0.0",
         port=8080,
-        webhook_url=WEBHOOK_URL,
-        secret_token=None,
-        cert=None,
-        key=None,
-        drop_pending_updates=False
+        webhook_url=WEBHOOK_URL
     )
