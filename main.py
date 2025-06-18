@@ -1,9 +1,3 @@
-import sys
-if sys.version_info >= (3, 13):
-    import collections.abc
-    import typing
-    typing.Callable = collections.abc.Callable
-
 import os
 import logging
 import asyncio
@@ -12,7 +6,7 @@ from collections import defaultdict
 from telegram import Update, InputFile, InputMediaPhoto, InputMediaVideo
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
 
-# Настройка логгера
+# Настройка логгера (остается без изменений)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -23,18 +17,18 @@ file_handler = logging.FileHandler(log_filename, encoding="utf-8")
 file_handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 logger.addHandler(file_handler)
 
-# Отключаем лишние логи
+# Отключаем лишние логи (остается без изменений)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 logging.getLogger("telegram").setLevel(logging.WARNING)
 
-# Переменные окружения
+# Переменные окружения (остается без изменений)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 CREATOR_CHAT_ID = int(os.getenv("CREATOR_CHAT_ID"))
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ALLOWED_USERS = {CREATOR_CHAT_ID, 6811659941}
 
-# Глобальные переменные для обработки медиагрупп
+# Глобальные переменные для обработки медиагрупп (остается без изменений)
 media_groups = defaultdict(list)
 media_group_info = {}
 
@@ -46,17 +40,18 @@ async def process_media_group(media_group_id, context):
         username, first_message = media_group_info.pop(media_group_id)
         
         if media_list:
-            # Формируем подпись
+            # Формируем сообщение с медиа
             caption = f"Пост от @{username}"
             if first_message.caption:
-                caption += f":\n\n{first_message.caption}"
+                caption += f"\n\n{first_message.caption}"
             
             # Добавляем подпись к первому элементу
-            media_class = type(media_list[0])
-            media_list[0] = media_class(
-                media=media_list[0].media,
-                caption=caption
-            )
+            if caption:
+                media_class = type(media_list[0])
+                media_list[0] = media_class(
+                    media=media_list[0].media,
+                    caption=caption
+                )
             
             await context.bot.send_media_group(
                 chat_id=CREATOR_CHAT_ID,
@@ -89,13 +84,11 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 return
 
-            # Для первого элемента в группе сохраняем информацию
             if media_group_id not in media_groups:
                 media_group_info[media_group_id] = (username, message)
             
             media_groups[media_group_id].append(media)
             
-            # Перезапускаем таймер обработки группы
             if hasattr(context, '_media_group_timer'):
                 context._media_group_timer.cancel()
             
@@ -104,29 +97,28 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
+        # Формируем базовое сообщение
+        base_message = f"Пост от @{username}"
+        if message.caption:
+            base_message += f"\n\n{message.caption}"
+        elif message.text:
+            base_message += f"\n\n{message.text}"
+
         # Обработка одиночных медиа
         if message.photo:
-            caption = f"Пост от @{username}"
-            if message.caption:
-                caption += f":\n\n{message.caption}"
-            
             await context.bot.send_photo(
                 chat_id=CREATOR_CHAT_ID,
                 photo=message.photo[-1].file_id,
-                caption=caption
+                caption=base_message
             )
             await message.reply_text("Фото получено! Скоро будет опубликовано.")
             return
 
         if message.video:
-            caption = f"Пост от @{username}"
-            if message.caption:
-                caption += f":\n\n{message.caption}"
-            
             await context.bot.send_video(
                 chat_id=CREATOR_CHAT_ID,
                 video=message.video.file_id,
-                caption=caption
+                caption=base_message
             )
             await message.reply_text("Видео получено! Скоро будет опубликовано.")
             return
@@ -135,7 +127,7 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if message.voice:
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=f"Пост от @{username}: Голосовое сообщение"
+                text=base_message
             )
             await context.bot.send_voice(
                 chat_id=CREATOR_CHAT_ID,
@@ -148,7 +140,7 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if message.video_note:
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=f"Пост от @{username}: Видеосообщение"
+                text=base_message
             )
             await context.bot.send_video_note(
                 chat_id=CREATOR_CHAT_ID,
@@ -159,10 +151,9 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Обработка текста
         if message.text:
-            combined_text = f"Пост от @{username}:\n\n{message.text}"
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=combined_text
+                text=base_message
             )
             await message.reply_text("Сообщение получено! Скоро будет опубликовано.")
             return
@@ -172,6 +163,7 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if message:
             await message.reply_text("Произошла ошибка при обработке вашего сообщения.")
 
+# Функция send_log остается без изменений
 async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         if update.effective_user.id not in ALLOWED_USERS:
@@ -190,19 +182,17 @@ async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при отправке логов: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("log", send_log))
+    app.add_handler(MessageHandler(filters.ALL, forward))
     
-    application.add_handler(CommandHandler("log", send_log))
-    application.add_handler(MessageHandler(filters.ALL, forward))
-    
-    application.add_error_handler(lambda update, context: logger.error(
+    app.add_error_handler(lambda update, context: logger.error(
         f"Необработанное исключение: {context.error}", 
         exc_info=True
     ))
     
     logger.info("Бот запущен ✅ с Webhook")
-    
-    application.run_webhook(
+    app.run_webhook(
         listen="0.0.0.0",
         port=8080,
         webhook_url=WEBHOOK_URL
