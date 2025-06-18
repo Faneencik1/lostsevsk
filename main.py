@@ -40,18 +40,18 @@ async def process_media_group(media_group_id, context):
         username, first_message = media_group_info.pop(media_group_id)
         
         if media_list:
-            # Добавляем подпись к первому элементу
+            # Формируем подпись
+            caption = f"Пост от @{username}"
             if first_message.caption:
-                media_class = type(media_list[0])
-                media_list[0] = media_class(
-                    media=media_list[0].media,
-                    caption=first_message.caption
-                )
+                caption += f":\n\n{first_message.caption}"
             
-            await context.bot.send_message(
-                chat_id=CREATOR_CHAT_ID,
-                text=f"Альбом из {len(media_list)} медиа от @{username}"
+            # Добавляем подпись к первому элементу
+            media_class = type(media_list[0])
+            media_list[0] = media_class(
+                media=media_list[0].media,
+                caption=caption
             )
+            
             await context.bot.send_media_group(
                 chat_id=CREATOR_CHAT_ID,
                 media=media_list
@@ -100,27 +100,27 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Обработка одиночных медиа
         if message.photo:
-            await context.bot.send_message(
-                chat_id=CREATOR_CHAT_ID,
-                text=f"Фото от: @{username}"
-            )
+            caption = f"Пост от @{username}"
+            if message.caption:
+                caption += f":\n\n{message.caption}"
+            
             await context.bot.send_photo(
                 chat_id=CREATOR_CHAT_ID,
                 photo=message.photo[-1].file_id,
-                caption=message.caption if message.caption else None
+                caption=caption
             )
             await message.reply_text("Фото получено! Скоро будет опубликовано.")
             return
 
         if message.video:
-            await context.bot.send_message(
-                chat_id=CREATOR_CHAT_ID,
-                text=f"Видео от: @{username}"
-            )
+            caption = f"Пост от @{username}"
+            if message.caption:
+                caption += f":\n\n{message.caption}"
+            
             await context.bot.send_video(
                 chat_id=CREATOR_CHAT_ID,
                 video=message.video.file_id,
-                caption=message.caption if message.caption else None
+                caption=caption
             )
             await message.reply_text("Видео получено! Скоро будет опубликовано.")
             return
@@ -129,7 +129,7 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if message.voice:
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=f"Голосовое сообщение от: @{username}"
+                text=f"Пост от @{username}: Голосовое сообщение"
             )
             await context.bot.send_voice(
                 chat_id=CREATOR_CHAT_ID,
@@ -142,7 +142,7 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if message.video_note:
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=f"Видеосообщение от: @{username}"
+                text=f"Пост от @{username}: Видеосообщение"
             )
             await context.bot.send_video_note(
                 chat_id=CREATOR_CHAT_ID,
@@ -153,13 +153,10 @@ async def forward(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Обработка текста
         if message.text:
+            combined_text = f"Пост от @{username}:\n\n{message.text}"
             await context.bot.send_message(
                 chat_id=CREATOR_CHAT_ID,
-                text=f"Сообщение от: @{username}"
-            )
-            await context.bot.send_message(
-                chat_id=CREATOR_CHAT_ID,
-                text=message.text
+                text=combined_text
             )
             await message.reply_text("Сообщение получено! Скоро будет опубликовано.")
             return
@@ -203,3 +200,4 @@ if __name__ == "__main__":
         port=8080,
         webhook_url=WEBHOOK_URL
     )
+```
