@@ -184,19 +184,28 @@ async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при отправке логов: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("log", send_log))
-    app.add_handler(MessageHandler(filters.ALL, forward))
+    # Создаем Application с указанием токена
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    # Добавляем обработчики
+    application.add_handler(CommandHandler("log", send_log))
+    application.add_handler(MessageHandler(filters.ALL, forward))
     
     # Обработчик ошибок
-    app.add_error_handler(lambda update, context: logger.error(
+    application.add_error_handler(lambda update, context: logger.error(
         f"Необработанное исключение: {context.error}", 
         exc_info=True
     ))
     
     logger.info("Бот запущен ✅ с Webhook")
-    app.run_webhook(
+    
+    # Запускаем приложение в режиме webhook
+    application.run_webhook(
         listen="0.0.0.0",
         port=8080,
-        webhook_url=WEBHOOK_URL
+        webhook_url=WEBHOOK_URL,
+        secret_token=None,
+        cert=None,
+        key=None,
+        drop_pending_updates=False
     )
