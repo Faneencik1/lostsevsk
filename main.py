@@ -4,7 +4,13 @@ import asyncio
 from datetime import datetime
 from collections import defaultdict
 from telegram import Update, InputFile, InputMediaPhoto, InputMediaVideo
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
+from telegram.ext import (
+    Application,
+    ContextTypes,
+    MessageHandler,
+    CommandHandler,
+    filters
+)
 
 # Настройка логгера (остается без изменений)
 logger = logging.getLogger(__name__)
@@ -182,7 +188,7 @@ async def send_log(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Ошибка при отправке логов: {e}", exc_info=True)
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("log", send_log))
     app.add_handler(MessageHandler(filters.ALL, forward))
     
@@ -195,5 +201,5 @@ if __name__ == "__main__":
     app.run_webhook(
         listen="0.0.0.0",
         port=8080,
-        webhook_url=WEBHOOK_URL
+        webhook_url=WEBHOOK_URL,
     )
